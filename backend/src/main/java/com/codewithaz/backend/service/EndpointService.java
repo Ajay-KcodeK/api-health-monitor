@@ -1,5 +1,6 @@
 package com.codewithaz.backend.service;
 
+import com.codewithaz.backend.dto.DashboardSummary;
 import com.codewithaz.backend.dto.EndpointRequest;
 import com.codewithaz.backend.dto.EndpointResponse;
 import com.codewithaz.backend.model.ApiEndpoint;
@@ -13,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -72,5 +74,31 @@ public class EndpointService {
         }
 
         apiEndpointRepository.delete(endpoint);
+    }
+
+    public DashboardSummary getDashboardSummary() {
+        User user = getCurrentUser();
+
+        List<EndpointResponse> endpoints = apiEndpointRepository
+                .findByUserId(user.getId())
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+
+        // Count each status using Java streams
+        // This is like SQL: SELECT status, COUNT(*) GROUP BY status
+        long up      = endpoints.stream().filter(e -> "UP".equals(e.getLastStatus())).count();
+        long down    = endpoints.stream().filter(e -> "DOWN".equals(e.getLastStatus())).count();
+        long slow    = endpoints.stream().filter(e -> "SLOW".equals(e.getLastStatus())).count();
+        long pending = endpoints.stream().filter(e -> "PENDING".equals(e.getLastStatus())).count();
+
+        return DashboardSummary.builder()
+                .total(endpoints.size())
+                .up(up)
+                .down(down)
+                .slow(slow)
+                .pending(pending)
+                .endpoints(endpoints)
+                .build();
     }
 }

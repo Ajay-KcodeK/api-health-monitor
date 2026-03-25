@@ -1,6 +1,7 @@
 package com.codewithaz.backend.controller;
 
 
+import com.codewithaz.backend.dto.DashboardSummary;
 import com.codewithaz.backend.dto.EndpointRequest;
 import com.codewithaz.backend.dto.EndpointResponse;
 import com.codewithaz.backend.service.EndpointService;
@@ -34,5 +35,10 @@ public class EndpointController {
         // @PathVariable extracts {id} from the URL
         endpointService.deleteEndpoint(id);
         return ResponseEntity.noContent().build(); // 204 No Content = success, nothing to return
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<DashboardSummary> getSummary() {
+        return ResponseEntity.ok(endpointService.getDashboardSummary());
     }
 }
