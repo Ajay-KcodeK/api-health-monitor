@@ -1,5 +1,6 @@
 package com.codewithaz.backend.service;
 
+import com.codewithaz.backend.dto.HealthCheckUpdate;
 import com.codewithaz.backend.model.ApiEndpoint;
 import com.codewithaz.backend.model.HealthCheck;
 import com.codewithaz.backend.repository.ApiEndpointRepository;
@@ -20,6 +21,7 @@ public class HealthCheckService {
     private final ApiEndpointRepository apiEndpointRepository;
     private final HealthCheckRepository healthCheckRepository;
     private final RestTemplate restTemplate;
+    private final WebSocketService webSocketService;
 
 
     // fixedDelay = wait 60 seconds AFTER last execution finishes before running again
@@ -65,6 +67,20 @@ public class HealthCheckService {
 
         HealthCheck savedCheck = healthCheckRepository.save(healthCheck);
         log.info("Checked {} → {} ({}ms)", endpoint.getUrl(), status, responseTime);
+
+        // Build WebSocket update message
+        HealthCheckUpdate update = HealthCheckUpdate.builder()
+                .endpointId(endpoint.getId())
+                .endpointName(endpoint.getName())
+                .url(endpoint.getUrl())
+                .status(status)
+                .responseTime(responseTime)
+                .statusCode(statusCode)
+                .checkedAt(savedCheck.getCheckedAt())
+                .build();
+
+        // Push to all connected browsers instantly
+        webSocketService.sendHealthUpdate(update);
         return savedCheck;
     }
 }
