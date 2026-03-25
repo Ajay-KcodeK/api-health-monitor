@@ -1,5 +1,7 @@
 package com.codewithaz.backend.security;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.security.SignatureException;
 
 @Component
 @RequiredArgsConstructor
@@ -22,32 +25,52 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
-            return; // ← This return is CRITICAL — stops execution here
+            return;
         }
 
         String token = authHeader.substring(7);
-        String userEmail = jwtService.extractEmail(token);
 
-        if(userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        try {
+            String email = jwtService.extractEmail(token);
 
-            if (jwtService.isTokenValid(token)) {
-                // Step 7: Load user details from DB
-                UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+            if (email != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // Step 8: Create authentication object and set in SecurityContext
-                // SecurityContext = Spring's way of storing "who is logged in right now"
+                UserDetails userDetails =
+                        userDetailsService.loadUserByUsername(email);
+
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
+
+        } catch (ExpiredJwtException e) {
+            // Token was valid but has expired — tell client to login again
+            request.setAttribute("jwt_error", "Token has expired — please login again");
+            SecurityContextHolder.clearContext();
+
+        } catch (MalformedJwtException e) {
+            // Token was tampered with or is fake
+            request.setAttribute("jwt_error", "Invalid token — please login again");
+            SecurityContextHolder.clearContext();
+
+        } catch (Exception e) {
+            // Any other token problem
+            request.setAttribute("jwt_error", "Authentication failed — please login again");
+            SecurityContextHolder.clearContext();
         }
+
         filterChain.doFilter(request, response);
     }
 }
