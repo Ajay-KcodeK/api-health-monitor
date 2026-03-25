@@ -22,9 +22,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // This is the URL React will connect to
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")  // Allow all origins (React on port 3000)
-                .withSockJS();  // SockJS = fallback for browsers that don't support WebSocket
+                .setAllowedOriginPatterns("*")
+                .withSockJS()
+                .setHeartbeatTime(25000)        // keep connection alive
+                .setDisconnectDelay(5000)       // wait before marking disconnect
+                .setClientLibraryUrl("https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js");
     }
 }

@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController               // Marks this as a REST API controller
 @RequestMapping("/api/auth")  // Base URL for all methods in this class
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")   // Allow React frontend to call this API
 public class AuthController {
 
     private final AuthService authService;

@@ -1,33 +1,28 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { HealthCheckUpdate } from '../types';
 
-// onUpdate = callback function called every time a health check arrives
 const useWebSocket = (onUpdate: (update: HealthCheckUpdate) => void) => {
-  // useRef keeps the STOMP client across renders without causing re-renders
   const clientRef = useRef<Client | null>(null);
-
-  // useCallback prevents unnecessary re-subscriptions
   const stableOnUpdate = useCallback(onUpdate, []);
 
   useEffect(() => {
-    // Create STOMP client
-    const client = new Client({
-      // SockJS creates the WebSocket connection to your Spring Boot app
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
-      // Retry connection every 5 seconds if disconnected
+    const client = new Client({
+      // Use brokerURL directly instead of SockJS factory
+      // This uses native WebSocket — more reliable for local dev
+      brokerURL: `ws://localhost:8080/ws/websocket`,
+
       reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
 
       onConnect: () => {
         console.log('WebSocket connected ✅');
-
-        // Subscribe to the topic Spring is broadcasting to
         client.subscribe('/topic/health-updates', (message) => {
-          // message.body is a JSON string — parse it to object
           const update: HealthCheckUpdate = JSON.parse(message.body);
-          stableOnUpdate(update);  // call the callback with new data
+          stableOnUpdate(update);
         });
       },
 
@@ -36,15 +31,17 @@ const useWebSocket = (onUpdate: (update: HealthCheckUpdate) => void) => {
       },
 
       onStompError: (frame) => {
-        console.error('WebSocket error:', frame);
+        console.error('STOMP error:', frame.headers['message']);
+      },
+
+      onWebSocketError: (error) => {
+        console.error('WebSocket error:', error);
       },
     });
 
-    // Activate the connection
     client.activate();
     clientRef.current = client;
 
-    // Cleanup — disconnect when component unmounts
     return () => {
       client.deactivate();
     };

@@ -14,7 +14,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/endpoints")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class EndpointController {
 
     private final EndpointService endpointService;

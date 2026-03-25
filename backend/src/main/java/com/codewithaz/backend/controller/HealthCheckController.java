@@ -11,7 +11,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/health")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class HealthCheckController {
 
     private final HealthCheckRepository healthCheckRepository;
