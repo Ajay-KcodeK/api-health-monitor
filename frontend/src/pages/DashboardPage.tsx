@@ -31,6 +31,10 @@ const DashboardPage: React.FC = () => {
     fetchSummary();
   }, [fetchSummary]);
 
+  useEffect(() => {
+  document.title = `Dashboard — API Health Monitor`;
+}, []);
+
   // WebSocket handler — called every time a health check arrives
   // This is where real-time magic happens
   const handleWebSocketUpdate = useCallback((update: HealthCheckUpdate) => {

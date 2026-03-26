@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginApi } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
@@ -42,6 +42,11 @@ const LoginPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Update browser tab title for each page
+useEffect(() => {
+  document.title = 'Login — API Health Monitor';
+}, []);
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">

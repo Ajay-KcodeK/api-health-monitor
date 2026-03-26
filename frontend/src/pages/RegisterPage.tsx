@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { registerApi } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
@@ -44,6 +44,10 @@ const RegisterPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+  document.title = 'Register — API Health Monitor';
+}, []);
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
