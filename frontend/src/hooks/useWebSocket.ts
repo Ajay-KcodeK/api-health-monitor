@@ -7,12 +7,18 @@ const useWebSocket = (onUpdate: (update: HealthCheckUpdate) => void) => {
   const stableOnUpdate = useCallback(onUpdate, []);
 
   useEffect(() => {
+    // Read API URL from environment variable
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
+    // Convert http/https → ws/wss for WebSocket protocol
+    // http://localhost:8080  → ws://localhost:8080
+    // https://app.onrender.com → wss://app.onrender.com
+    const wsUrl = apiUrl
+      .replace('https://', 'wss://')
+      .replace('http://', 'ws://');
+
     const client = new Client({
-      // Use brokerURL directly instead of SockJS factory
-      // This uses native WebSocket — more reliable for local dev
-      brokerURL: `ws://localhost:8080/ws/websocket`,
+      brokerURL: `${wsUrl}/ws/websocket`,  // ← dynamic now
 
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
