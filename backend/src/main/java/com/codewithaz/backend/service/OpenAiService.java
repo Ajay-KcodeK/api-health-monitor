@@ -7,6 +7,7 @@ import com.codewithaz.backend.model.ApiEndpoint;
 import com.codewithaz.backend.model.HealthCheck;
 import com.codewithaz.backend.repository.ApiEndpointRepository;
 import com.codewithaz.backend.repository.HealthCheckRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -119,48 +120,54 @@ public class OpenAiService {
 
     private String callOpenAI(String dataSummary) {
         try {
-            // Build the request
             OpenAiRequest request = OpenAiRequest.builder()
                     .model(model)
                     .max_tokens(300)
                     .temperature(0.7)
                     .messages(List.of(
-                            // System message — tells AI its role
                             new OpenAiRequest.Message(
                                     "system",
                                     "You are an expert API reliability engineer. " +
-                                            "Analyze the provided API health data and give " +
-                                            "concise, actionable insights in 3-4 sentences. " +
-                                            "Focus on: uptime quality, performance patterns, " +
-                                            "and specific recommendations to improve reliability."
+                                            "Analyze the API health data and give concise " +
+                                            "actionable insights in 3-4 sentences."
                             ),
-                            // User message — the actual data
                             new OpenAiRequest.Message("user", dataSummary)
                     ))
                     .build();
 
-            // Make HTTP call to OpenAI using WebClient
+            // Log what we are sending — helps debug
+            log.info("Sending to Groq — model: {}, messages: {}",
+                    model, request.getMessages().size());
+
             WebClient webClient = WebClient.create();
 
-            OpenAiResponse response = webClient.post()
+            String rawResponse = webClient.post()
                     .uri(apiUrl)
                     .header("Authorization", "Bearer " + apiKey)
                     .header("Content-Type", "application/json")
                     .bodyValue(request)
                     .retrieve()
-                    .bodyToMono(OpenAiResponse.class)
-                    .block(); // block = wait for response (synchronous)
+                    .onStatus(
+                            status -> status.is4xxClientError() || status.is5xxServerError(),
+                            clientResponse -> clientResponse.bodyToMono(String.class)
+                                    .doOnNext(body -> log.error("Groq error body: {}", body))
+                                    .then(clientResponse.createException())
+                    )
+                    .bodyToMono(String.class)
+                    .block();
 
-            if (response != null) {
-                return response.getInsightText();
-            }
+            log.info("Groq raw response: {}", rawResponse);
 
-            return "Unable to generate insights at this time.";
+            // Parse manually
+            ObjectMapper mapper =
+                    new ObjectMapper();
+            OpenAiResponse response = mapper.readValue(rawResponse, OpenAiResponse.class);
+
+            return response.getInsightText();
 
         } catch (Exception e) {
             log.error("OpenAI API call failed: {}", e.getMessage());
-            return "AI insights temporarily unavailable. " +
-                    "Please try again later.";
+            return "AI insights temporarily unavailable. Please try again.";
         }
     }
 }

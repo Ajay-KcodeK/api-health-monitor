@@ -1,5 +1,6 @@
 package com.codewithaz.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +15,8 @@ public class OpenAiRequest {
 
     private String model;
     private List<Message> messages;
+
+    @JsonProperty("max_tokens")      // explicit JSON field name
     private int max_tokens;
     private double temperature;
 
