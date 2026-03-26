@@ -229,15 +229,6 @@ const DashboardPage: React.FC = () => {
                   onSelect={handleSelect}
                   isSelected={selectedId === endpoint.id}
                 />
-
-                {/* Show history chart below selected card */}
-                {selectedId === endpoint.id && selectedEndpoint && (
-                  <HistoryChart
-                    endpointId={endpoint.id}
-                    endpointName={endpoint.name}
-                  />
-                )}
-
                 {selectedId === endpoint.id && selectedEndpoint && (
                   <>
                     <HistoryChart
