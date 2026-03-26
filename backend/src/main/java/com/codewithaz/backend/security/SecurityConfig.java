@@ -1,6 +1,7 @@
 package com.codewithaz.backend.security;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -27,6 +28,10 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final JwtAuthEntryPoint authEntryPoint;
+
+    // THIS LINE — reads from application.properties or environment variable
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;  // ← this is where it's defined
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -55,17 +60,13 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Explicitly list allowed origins — no wildcard with credentials
-        config.setAllowedOrigins(List.of(
-                "http://localhost:3000"
-        ));
+        // Split by comma — supports multiple origins
+        String[] origins = allowedOrigins.split(",");
+        config.setAllowedOriginPatterns(Arrays.asList(origins));  // use Patterns not Origins
 
-        // Allow all standard HTTP methods
         config.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
         ));
-
-        // Allow all headers including Authorization
         config.setAllowedHeaders(Arrays.asList(
                 "Authorization",
                 "Content-Type",
@@ -73,14 +74,8 @@ public class SecurityConfig {
                 "Origin",
                 "X-Requested-With"
         ));
-
-        // Expose Authorization header to frontend
         config.setExposedHeaders(List.of("Authorization"));
-
-        // Must be false when using allowedOrigins (not patterns)
         config.setAllowCredentials(false);
-
-        // Cache preflight response for 1 hour — browser won't re-send OPTIONS
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
