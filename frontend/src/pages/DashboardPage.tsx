@@ -6,6 +6,7 @@ import SummaryStats from '../components/SummaryStats';
 import AddEndpointForm from '../components/AddEndpointForm';
 import EndpointCard from '../components/EndpointCard';
 import HistoryChart from '../components/HistoryChart';
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import useWebSocket from '../hooks/useWebSocket';
 
 const DashboardPage: React.FC = () => {
@@ -13,6 +14,8 @@ const DashboardPage: React.FC = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch dashboard summary from API
   const fetchSummary = useCallback(async () => {
@@ -84,10 +87,17 @@ const DashboardPage: React.FC = () => {
     });
   };
 
-  // Called when user deletes an endpoint
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Delete this endpoint?')) return;
+  // Called when user clicks delete — shows modal
+  const handleDelete = (id: number) => {
+    setPendingDeleteId(id);
+  };
 
+  // Called when user confirms delete in modal
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+
+    setIsDeleting(true);
     try {
       await deleteEndpointApi(id);
 
@@ -95,12 +105,10 @@ const DashboardPage: React.FC = () => {
         if (!prev) return prev;
         const removed = prev.endpoints.find(e => e.id === id);
         const updatedEndpoints = prev.endpoints.filter(e => e.id !== id);
-
         return {
           ...prev,
           endpoints: updatedEndpoints,
           total: prev.total - 1,
-          // Decrease the right counter
           up:      removed?.lastStatus === 'UP'      ? prev.up - 1      : prev.up,
           down:    removed?.lastStatus === 'DOWN'    ? prev.down - 1    : prev.down,
           slow:    removed?.lastStatus === 'SLOW'    ? prev.slow - 1    : prev.slow,
@@ -108,11 +116,12 @@ const DashboardPage: React.FC = () => {
         };
       });
 
-      // If deleted endpoint was selected, deselect
       if (selectedId === id) setSelectedId(null);
-
+      setPendingDeleteId(null);
     } catch (err) {
-      alert('Failed to delete endpoint');
+      // keep modal open so user can retry
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -219,6 +228,15 @@ const DashboardPage: React.FC = () => {
         )}
 
       </main>
+      {/* Delete confirmation modal */}
+      {pendingDeleteId && (
+        <ConfirmDeleteModal
+          endpointName={summary?.endpoints.find(e => e.id === pendingDeleteId)?.name ?? ''}
+          isDeleting={isDeleting}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => !isDeleting && setPendingDeleteId(null)}
+        />
+      )}
     </div>
   );
 };

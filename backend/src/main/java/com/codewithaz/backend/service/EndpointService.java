@@ -12,6 +12,7 @@ import com.codewithaz.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -64,6 +65,7 @@ public class EndpointService {
                 .toList();
     }
 
+    @Transactional
     public void deleteEndpoint(Long id) {
         User user = getCurrentUser();
         ApiEndpoint endpoint = apiEndpointRepository.findById(id)
@@ -73,6 +75,7 @@ public class EndpointService {
             throw new RuntimeException("Unauthorized: this endpoint doesn't belong to you");
         }
 
+        healthCheckRepository.deleteByEndpointId(id);
         apiEndpointRepository.delete(endpoint);
     }
 
