@@ -31,4 +31,9 @@ public class HealthCheckController {
                 .toList();
         return ResponseEntity.ok(checks);
     }
+
+    @GetMapping("/ping")
+    public ResponseEntity<String> ping() {
+        return ResponseEntity.ok("pong");
+    }
 }

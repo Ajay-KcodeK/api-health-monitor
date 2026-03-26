@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -147,20 +148,20 @@ public class OpenAiService {
                     .header("Content-Type", "application/json")
                     .bodyValue(request)
                     .retrieve()
-                    .onStatus(
-                            status -> status.is4xxClientError() || status.is5xxServerError(),
-                            clientResponse -> clientResponse.bodyToMono(String.class)
-                                    .doOnNext(body -> log.error("Groq error body: {}", body))
-                                    .then(clientResponse.createException())
-                    )
                     .bodyToMono(String.class)
+                    .onErrorResume(e -> {
+                        log.error("Groq API error: {}", e.getMessage());
+                        return Mono.empty();
+                    })
                     .block();
+
+            if (rawResponse == null) {
+                return "AI insights temporarily unavailable. Please try again.";
+            }
 
             log.info("Groq raw response: {}", rawResponse);
 
-            // Parse manually
-            ObjectMapper mapper =
-                    new ObjectMapper();
+            ObjectMapper mapper = new ObjectMapper();
             OpenAiResponse response = mapper.readValue(rawResponse, OpenAiResponse.class);
 
             return response.getInsightText();
