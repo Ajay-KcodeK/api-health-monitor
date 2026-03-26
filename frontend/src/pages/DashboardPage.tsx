@@ -1,13 +1,18 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { getDashboardSummaryApi, deleteEndpointApi } from '../api/endpoints';
-import { DashboardSummary, EndpointResponse, HealthCheckUpdate } from '../types';
-import SummaryStats from '../components/SummaryStats';
-import AddEndpointForm from '../components/AddEndpointForm';
-import EndpointCard from '../components/EndpointCard';
-import HistoryChart from '../components/HistoryChart';
-import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
-import useWebSocket from '../hooks/useWebSocket';
+import React, { useEffect, useState, useCallback } from "react";
+import { useAuth } from "../context/AuthContext";
+import { getDashboardSummaryApi, deleteEndpointApi } from "../api/endpoints";
+import {
+  DashboardSummary,
+  EndpointResponse,
+  HealthCheckUpdate,
+} from "../types";
+import SummaryStats from "../components/SummaryStats";
+import AddEndpointForm from "../components/AddEndpointForm";
+import EndpointCard from "../components/EndpointCard";
+import HistoryChart from "../components/HistoryChart";
+import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
+import useWebSocket from "../hooks/useWebSocket";
+import AiInsightPanel from "../components/AiInsightPanel";
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
@@ -23,7 +28,7 @@ const DashboardPage: React.FC = () => {
       const data = await getDashboardSummaryApi();
       setSummary(data);
     } catch (err) {
-      console.error('Failed to fetch summary', err);
+      console.error("Failed to fetch summary", err);
     } finally {
       setLoading(false);
     }
@@ -35,22 +40,22 @@ const DashboardPage: React.FC = () => {
   }, [fetchSummary]);
 
   useEffect(() => {
-  document.title = `Dashboard — API Health Monitor`;
-}, []);
+    document.title = `Dashboard — API Health Monitor`;
+  }, []);
 
   // WebSocket handler — called every time a health check arrives
   // This is where real-time magic happens
   const handleWebSocketUpdate = useCallback((update: HealthCheckUpdate) => {
-    setSummary(prev => {
+    setSummary((prev) => {
       if (!prev) return prev;
 
       // Update just the one endpoint that changed
       // Don't refetch everything — just patch the state
-      const updatedEndpoints = prev.endpoints.map(ep => {
+      const updatedEndpoints = prev.endpoints.map((ep) => {
         if (ep.id === update.endpointId) {
           return {
-            ...ep,                              // keep all existing fields
-            lastStatus: update.status,          // update status
+            ...ep, // keep all existing fields
+            lastStatus: update.status, // update status
             lastResponseTime: update.responseTime, // update response time
           };
         }
@@ -58,15 +63,24 @@ const DashboardPage: React.FC = () => {
       });
 
       // Recalculate counts from updated endpoints
-      const up      = updatedEndpoints.filter(e => e.lastStatus === 'UP').length;
-      const down    = updatedEndpoints.filter(e => e.lastStatus === 'DOWN').length;
-      const slow    = updatedEndpoints.filter(e => e.lastStatus === 'SLOW').length;
-      const pending = updatedEndpoints.filter(e => e.lastStatus === 'PENDING').length;
+      const up = updatedEndpoints.filter((e) => e.lastStatus === "UP").length;
+      const down = updatedEndpoints.filter(
+        (e) => e.lastStatus === "DOWN",
+      ).length;
+      const slow = updatedEndpoints.filter(
+        (e) => e.lastStatus === "SLOW",
+      ).length;
+      const pending = updatedEndpoints.filter(
+        (e) => e.lastStatus === "PENDING",
+      ).length;
 
       return {
         ...prev,
         endpoints: updatedEndpoints,
-        up, down, slow, pending,
+        up,
+        down,
+        slow,
+        pending,
       };
     });
   }, []);
@@ -76,7 +90,7 @@ const DashboardPage: React.FC = () => {
 
   // Called when user adds a new endpoint
   const handleAdd = (newEndpoint: EndpointResponse) => {
-    setSummary(prev => {
+    setSummary((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
@@ -101,18 +115,19 @@ const DashboardPage: React.FC = () => {
     try {
       await deleteEndpointApi(id);
 
-      setSummary(prev => {
+      setSummary((prev) => {
         if (!prev) return prev;
-        const removed = prev.endpoints.find(e => e.id === id);
-        const updatedEndpoints = prev.endpoints.filter(e => e.id !== id);
+        const removed = prev.endpoints.find((e) => e.id === id);
+        const updatedEndpoints = prev.endpoints.filter((e) => e.id !== id);
         return {
           ...prev,
           endpoints: updatedEndpoints,
           total: prev.total - 1,
-          up:      removed?.lastStatus === 'UP'      ? prev.up - 1      : prev.up,
-          down:    removed?.lastStatus === 'DOWN'    ? prev.down - 1    : prev.down,
-          slow:    removed?.lastStatus === 'SLOW'    ? prev.slow - 1    : prev.slow,
-          pending: removed?.lastStatus === 'PENDING' ? prev.pending - 1 : prev.pending,
+          up: removed?.lastStatus === "UP" ? prev.up - 1 : prev.up,
+          down: removed?.lastStatus === "DOWN" ? prev.down - 1 : prev.down,
+          slow: removed?.lastStatus === "SLOW" ? prev.slow - 1 : prev.slow,
+          pending:
+            removed?.lastStatus === "PENDING" ? prev.pending - 1 : prev.pending,
         };
       });
 
@@ -127,7 +142,7 @@ const DashboardPage: React.FC = () => {
 
   // Toggle selection — click same card to deselect
   const handleSelect = (id: number) => {
-    setSelectedId(prev => prev === id ? null : id);
+    setSelectedId((prev) => (prev === id ? null : id));
   };
 
   // Loading state
@@ -141,14 +156,15 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  const selectedEndpoint = summary?.endpoints.find(e => e.id === selectedId);
+  const selectedEndpoint = summary?.endpoints.find((e) => e.id === selectedId);
 
   return (
     <div className="min-h-screen bg-gray-950">
-
       {/* Navbar */}
-      <nav className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm
-                      sticky top-0 z-50">
+      <nav
+        className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm
+                      sticky top-0 z-50"
+      >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🔍</span>
@@ -186,7 +202,6 @@ const DashboardPage: React.FC = () => {
 
       {/* Main content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
-
         {/* Summary stats */}
         {summary && <SummaryStats summary={summary} />}
 
@@ -206,7 +221,7 @@ const DashboardPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {summary?.endpoints.map(endpoint => (
+            {summary?.endpoints.map((endpoint) => (
               <React.Fragment key={endpoint.id}>
                 <EndpointCard
                   endpoint={endpoint}
@@ -222,16 +237,30 @@ const DashboardPage: React.FC = () => {
                     endpointName={endpoint.name}
                   />
                 )}
+
+                {selectedId === endpoint.id && selectedEndpoint && (
+                  <>
+                    <HistoryChart
+                      endpointId={endpoint.id}
+                      endpointName={endpoint.name}
+                    />
+                    <AiInsightPanel
+                      endpointId={endpoint.id}
+                      endpointName={endpoint.name}
+                    />
+                  </>
+                )}
               </React.Fragment>
             ))}
           </div>
         )}
-
       </main>
       {/* Delete confirmation modal */}
       {pendingDeleteId && (
         <ConfirmDeleteModal
-          endpointName={summary?.endpoints.find(e => e.id === pendingDeleteId)?.name ?? ''}
+          endpointName={
+            summary?.endpoints.find((e) => e.id === pendingDeleteId)?.name ?? ""
+          }
           isDeleting={isDeleting}
           onConfirm={handleConfirmDelete}
           onCancel={() => !isDeleting && setPendingDeleteId(null)}

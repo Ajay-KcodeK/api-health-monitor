@@ -64,5 +64,13 @@ export interface EndpointRequest {
   url: string;
 }
 
+export interface InsightResponse {
+  endpointId: number;
+  endpointName: string;
+  url: string;
+  insight: string;
+  generatedAt: string;
+}
+
 export {};
 
